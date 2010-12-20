@@ -264,7 +264,7 @@
 
           this.setAttribute("valid-uri", "true");
           if (!this._focused)
-            this.inputField.value = losslessDecodeURI(this.uri);
+            this.inputField.value = this.uri.asciiSpec;
 
           var presentation = this.presentation;
           var prePathNode = this.prePathNode;
@@ -294,7 +294,7 @@
           while (prePathNode.nextSibling != this.pathFileNode)
             presentation.removeChild(prePathNode.nextSibling);
 
-          var pathSegments = losslessDecodeURI(this.uri).replace(/^[^:]*:\/\/[^/]*\//, "");
+          var pathSegments = this.uri.asciiSpec.replace(/^[^:]*:\/\/[^/]*\//, "");
 
           var iFragment = pathSegments.indexOf("#");
           if (iFragment > -1) {
@@ -304,8 +304,10 @@
             this.fragmentNode.value = "";
 
           var iQuery = pathSegments.indexOf("?");
+          var rawQuery = '';
           if (iQuery > -1) {
-            this.queryNode.value = pathSegments.substring(iQuery);
+            rawQuery = pathSegments.substring(iQuery);
+            this.queryNode.value = this._decodeEverything(rawQuery);
             pathSegments = pathSegments.substring(0, iQuery);
           } else
             this.queryNode.value = "";
@@ -316,11 +318,11 @@
           var href = prePathNode.href;
           for (var i = 0; i < pathSegments.length; i++) {
             var node = this.pathSegmentProto.cloneNode(true);
-            node.value = pathSegments[i];
+            node.value = this._decodeEverything(pathSegments[i]);
             node.href = (href += pathSegments[i] + "/");
             presentation.insertBefore(node, this.pathFileNode);
           }
-          this.pathFileNode.href = href + this.fileNode.value + this.queryNode.value + this.fragmentNode.value;
+          this.pathFileNode.href = href + this.fileNode.value + rawQuery + this.fragmentNode.value;
         ]]></body>
       </method>
 
@@ -351,6 +353,38 @@
         ]]></body>
       </method>
 
+      <method name="_decodeEverything">
+        <parameter name="aString"/>
+        <body><![CDATA[
+		  
+		  if(!aString)
+			return '';
+		  else {
+
+			var last;
+			while(aString.indexOf('%') != -1) {
+			
+			  last = aString;
+
+			  try {
+				aString = decodeURIComponent(aString);
+			  }
+			  catch(e) {//malformed urls are still valid resources!
+				  try {
+					aString = decodeURI(aString);
+				  } catch(e){//trust me, malformed urls are still valid resources.
+					return aString;
+				  }
+			  }
+			  if(aString==last)
+				  break;
+			}
+			return aString;
+		  }
+		  
+        ]]></body>
+      </method>
+
       <method name="_initURLTooltip">
         <parameter name="callback"/>
         <parameter name="object"/>
@@ -362,7 +396,7 @@
             self._tooltipTimer = 0;
             var tooltipText = callback.apply(object);
             if (tooltipText) {
-              self.urlTooltipLabel.value = tooltipText;
+              self.urlTooltipLabel.value = self._decodeEverything(tooltipText);
               self.urlTooltipLabel.crop = crop || "center";
               var bO = self.boxObject;
               self.urlTooltip.maxWidth = bO.width;
