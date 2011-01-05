@@ -265,7 +265,7 @@
           }
 
           this.setAttribute("valid-uri", "true");
-          if (!this._focused)
+          //if (!this._focused)
             this.inputField.value = this.uri.asciiSpec;
 
           var presentation = this.presentation;
@@ -299,8 +299,10 @@
           var pathSegments = this.uri.asciiSpec.replace(/^[^:]*:\/\/[^/]*\//, "");
 
           var iFragment = pathSegments.indexOf("#");
+		  var rawFragmentNode = '';
           if (iFragment > -1) {
-            this.fragmentNode.value = pathSegments.substring(iFragment);
+			rawFragmentNode = pathSegments.substring(iFragment);
+            this.fragmentNode.value = this._decodeEverything(rawFragmentNode);
             pathSegments = pathSegments.substring(0, iFragment);
           } else
             this.fragmentNode.value = "";
@@ -315,7 +317,8 @@
             this.queryNode.value = "";
 
           pathSegments = pathSegments.split("/");
-          this.fileNode.value = pathSegments.pop();
+		  var rawFileNode = pathSegments.pop();
+          this.fileNode.value = this._decodeEverything(rawFileNode);
 
           var href = prePathNode.href;
           for (var i = 0; i < pathSegments.length; i++) {
@@ -324,7 +327,7 @@
             node.href = (href += pathSegments[i] + "/");
             presentation.insertBefore(node, this.pathFileNode);
           }
-          this.pathFileNode.href = href + this.fileNode.value + rawQuery + this.fragmentNode.value;
+          this.pathFileNode.href = href + rawFileNode + rawQuery + rawFragmentNode;
         ]]></body>
       </method>
 
@@ -519,7 +522,7 @@
         if (this._focused && !this._dontBlur && event.originalTarget == this.inputField) {
           this._focused = false;
           this._syncValue();
-          if (!this._mouseover)
+          //if (!this._mouseover)
             this.prettyView();
         }
       ]]></handler>
