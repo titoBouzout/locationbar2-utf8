@@ -249,6 +249,7 @@
       </property>
 
       <method name="_syncValue">
+		<parameter name="fireByOnInput"/>
         <body><![CDATA[
           if (this.value == "")
             this.uri = null;
@@ -266,6 +267,7 @@
 
           this.setAttribute("valid-uri", "true");
           //if (!this._focused)
+		  if(!fireByOnInput)
             this.inputField.value = this.uri.asciiSpec;
 
           var presentation = this.presentation;
@@ -358,38 +360,6 @@
         ]]></body>
       </method>
 
-      <method name="_decodeEverything">
-        <parameter name="aString"/>
-        <body><![CDATA[
-		  
-		  if(!aString)
-			return '';
-		  else {
-
-			var last;
-			while(aString.indexOf('%') != -1) {
-			
-			  last = aString;
-
-			  try {
-				aString = decodeURIComponent(aString);
-			  }
-			  catch(e) {//malformed urls are still valid resources!
-				  try {
-					aString = decodeURI(aString);
-				  } catch(e){//trust me, malformed urls are still valid resources.
-					return aString;
-				  }
-			  }
-			  if(aString==last)
-				  break;
-			}
-			return aString;
-		  }
-		  
-        ]]></body>
-      </method>
-
       <method name="_initURLTooltip">
         <parameter name="callback"/>
         <parameter name="object"/>
@@ -460,11 +430,133 @@
           }
         ]]></body>
       </method>
+
+      <method name="_decodeEverything">
+        <parameter name="aString"/>
+        <body><![CDATA[
+		  
+		  if(!aString)
+			return '';
+		  else {
+
+			var last;
+			while(aString.indexOf('%') != -1) {
+			
+			  last = aString;
+
+			  try {
+				aString = decodeURIComponent(aString);
+			  }
+			  catch(e) {//malformed urls are still valid resources!
+				  try {
+					aString = decodeURI(aString);
+				  } catch(e){//trust me, malformed urls are still valid resources.
+					return aString;
+				  }
+			  }
+			  if(aString==last)
+				  break;
+			}
+			return aString;
+		  }
+		  
+        ]]></body>
+      </method>
+
+      <method name="_encodeSelected">
+		<parameter name="aEvent"/>
+        <body><![CDATA[
+			let tBox = document.commandDispatcher.focusedElement;
+			if(!tBox.value || tBox.value == '')
+				return '';
+			if(aEvent.ctrlKey)
+			  var aFunction = this._encodeURI;
+			else
+			  var aFunction = this._encodeURIComponent;
+			try
+			{
+				let before= tBox.value.substring(0, tBox.selectionStart);
+				let selection = tBox.value.substring(tBox.selectionStart, tBox.selectionEnd);
+				let after = tBox.value.substring(tBox.selectionEnd, tBox.value.length);
+				tBox.value= String.concat(before, aFunction(selection), after);
+				tBox.setSelectionRange(before.length, before.length+(aFunction(selection).length));
+			}
+			catch(e){alert(e);}
+        ]]></body>
+      </method>
+	  
+      <method name="_decodeSelected">
+		<parameter name="aEvent"/>
+        <body><![CDATA[
+			let tBox = document.commandDispatcher.focusedElement;
+			if(!tBox.value || tBox.value == '')
+				return '';
+			if(aEvent.ctrlKey)
+			  var aFunction = this._decodeURI;
+			else
+			  var aFunction = this._decodeURIComponent;
+			try
+			{
+				let before= tBox.value.substring(0, tBox.selectionStart);
+				let selection = tBox.value.substring(tBox.selectionStart, tBox.selectionEnd);
+				let after = tBox.value.substring(tBox.selectionEnd, tBox.value.length);
+				tBox.value= String.concat(before, aFunction(selection), after);
+				tBox.setSelectionRange(before.length, before.length+(aFunction(selection).length));
+			}
+			catch(e){alert(e);}
+        ]]></body>
+      </method>
+
+	  <method name="_decodeURIComponent">
+		<parameter name="aString"/>
+        <body><![CDATA[
+		  try {
+			aString = decodeURIComponent(aString);
+		  }
+		  catch(e) {//malformed urls are still valid resources!
+		  }
+		  return aString;
+        ]]></body>
+      </method>
+	  <method name="_encodeURIComponent">
+		<parameter name="aString"/>
+        <body><![CDATA[
+		  try {
+			aString = encodeURIComponent(aString);
+		  }
+		  catch(e) {//malformed urls are still valid resources!
+		  }
+		  return aString;
+        ]]></body>
+      </method>
+	  <method name="_encodeURI">
+		<parameter name="aString"/>
+        <body><![CDATA[
+		  try {
+			aString = encodeURI(aString);
+		  }
+		  catch(e) {//malformed urls are still valid resources!
+		  }
+		  return aString;
+        ]]></body>
+      </method>
+	  <method name="_decodeURI">
+		<parameter name="aString"/>
+        <body><![CDATA[
+		  try {
+			aString = decodeURI(aString);
+		  }
+		  catch(e) {//malformed urls are still valid resources!
+		  }
+		  return aString;
+        ]]></body>
+      </method>
+
     </implementation>
 
     <handlers>
       <handler event="input"
-               action="this._syncValue();"/>
+               action="this._syncValue(true);"/>
 
       <handler event="mousemove"><![CDATA[
         if (this.plain && !this._focused && this.contentIsCropped)
@@ -516,6 +608,8 @@
           if (!this.plain)
             this.plain = true;
         }
+		document.getElementById('locationbar2-tool-encode').setAttribute('hidden', false);
+		document.getElementById('locationbar2-tool-decode').setAttribute('hidden', false);
       ]]></handler>
 
       <handler event="blur" phase="capturing"><![CDATA[
@@ -525,6 +619,8 @@
           //if (!this._mouseover)
             this.prettyView();
         }
+		document.getElementById('locationbar2-tool-encode').setAttribute('hidden', true);
+		document.getElementById('locationbar2-tool-decode').setAttribute('hidden', true);
       ]]></handler>
     </handlers>
 
