@@ -43,7 +43,7 @@
 
   <binding id="urlbar" extends="chrome://browser/content/urlbarBindings.xml#urlbar">
     <content sizetopopup="pref">
-      <xul:hbox class="autocomplete-textbox-container" flex="1">
+      <xul:hbox class="autocomplete-textbox-container urlbar-textbox-container" flex="1">
 <!-- fission: -->
         <xul:stack flex="1">
           <children includes="progressmeter"/>
@@ -56,11 +56,11 @@
           </children>
         </xul:hbox>
 
-        <xul:stack flex="1" anonid="textbox-input-box" class="textbox-input-box">
+        <xul:stack flex="1" anonid="textbox-input-box" class="textbox-input-box urlbar-input-box">
           <xul:hbox anonid="textbox-input-box-inner" xbl:inherits="tooltiptext=inputtooltiptext"
                     flex="1" align="center">
             <children/>
-            <html:input anonid="input" class="autocomplete-textbox textbox-input"
+            <html:input anonid="input" class="autocomplete-textbox urlbar-input textbox-input uri-element-right-align"
                         flex="1" allowevents="true"
                         xbl:inherits="tooltiptext=inputtooltiptext,onfocus,onblur,value,type,maxlength,disabled,size,readonly,placeholder,userAction"/>
           </xul:hbox>
@@ -96,9 +96,12 @@
 <!-- /fission -->
       </xul:hbox>
 
-      <xul:dropmarker anonid="historydropmarker" class="autocomplete-history-dropmarker"
+      <xul:dropmarker anonid="historydropmarker"
+                      class="autocomplete-history-dropmarker urlbar-history-dropmarker"
                       allowevents="true"
                       xbl:inherits="open,enablehistory,parentfocused=focused"/>
+
+      <children includes="toolbarbutton"/>
 
       <xul:popupset anonid="popupset" class="autocomplete-result-popupset"/>
     </content>
@@ -220,10 +223,21 @@
                 onget="return !this.overflowEllipsis.hidden;"
                 onset="this.overflowEllipsis.hidden = !val; return val;"/>
 
-      <property name="value"
-                onget="return (this.hasAttribute('isempty') || this.hasAttribute('empty')) ? '' : this.inputField.value;">
+      <property name="value">
+        <getter><![CDATA[
+          if (typeof this.onBeforeValueGet == "function") {
+            var result = this.onBeforeValueGet();
+            if (result)
+              return result.value;
+          }
+          return (this.hasAttribute('isempty') || this.hasAttribute('empty')) ? '' : this.inputField.value;
+        ]]></getter>
         <setter><![CDATA[
           this.mIgnoreInput = true;
+
+          if (typeof this.onBeforeValueSet == "function")
+            val = this.onBeforeValueSet(val);
+
           if (val) {
             // clear the emptyText _before_ setting a new non-empty value
             if (this._clearEmptyText)
@@ -665,7 +679,8 @@
             event.originalTarget != this &&
             event.originalTarget.className != "textbox-presentation-slash" &&
             gURLBar.getAttribute("linkify") == "true") {
-          openUILink(this.href, event, false, true);
+          openUILinkIn(this.href, whereToOpenLink(event, false, true),
+                       { relatedToCurrent: true });
           event.stopPropagation();
           event.preventDefault();
         }
