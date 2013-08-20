@@ -141,7 +141,6 @@
       <field name="_focused"/>
       <field name="_mouseover"/>
       <field name="_iconWasHovered"/>
-      <field name="_tooltipTimer"/>
       <field name="pathSegmentProto">
         var node = document.createElement("label");
         node.className = "textbox-presentation-segment textbox-presentation-path";
@@ -189,12 +188,8 @@
       <field name="fragmentNode">
         document.getAnonymousElementByAttribute(this, "anonid", "fragment");
       </field>
-      <field name="urlTooltip">
-        document.getElementById("urlTooltip");
-      </field>
-      <field name="urlTooltipLabel">
-        this.urlTooltip.getElementsByTagName("label")[0];
-      </field>
+
+
       <field name="_tldService" readonly="true"><![CDATA[
         Components.classes["@mozilla.org/network/effective-tld-service;1"]
                   .getService(Components.interfaces.nsIEffectiveTLDService);
@@ -214,7 +209,6 @@
           } else
             this.inputBoxInner.style.setProperty("opacity", "0", "important");
           this.presentationBox.style.removeProperty("opacity");
-          this._hideURLTooltip();
           return val;
         ]]></setter>
       </property>
@@ -374,32 +368,15 @@
         ]]></body>
       </method>
 
-      <method name="_initURLTooltip">
-        <parameter name="callback"/>
-        <parameter name="object"/>
-        <parameter name="crop"/>
-        <body><![CDATA[
-          if (this._tooltipTimer)
-            clearTimeout(this._tooltipTimer);
-          this._tooltipTimer = setTimeout (function (self) {
-            self._tooltipTimer = 0;
-            var tooltipText = callback.apply(object);
-            if (tooltipText) {
-              self.urlTooltipLabel.value = self._decodeEverything(tooltipText);
-              self.urlTooltipLabel.crop = crop || "center";
-              var bO = self.boxObject;
-              self.urlTooltip.maxWidth = bO.width;
-              self.urlTooltip.showPopup(self, bO.screenX, bO.screenY + bO.height, "tooltip");
-            }
-          }, 400, this);
-        ]]></body>
-      </method>
+
 
       <method name="handleEvent">
         <parameter name="aEvent"/>
         <body><![CDATA[
           switch (aEvent.type) {
             case "mousedown":
+
+            //gURLBar.focus();
               if (this.doubleClickSelectsAll &&
                   aEvent.button == 0 && aEvent.detail == 2) {
                 this.editor.selectAll();
@@ -448,14 +425,14 @@
       <method name="_decodeEverything">
         <parameter name="aString"/>
         <body><![CDATA[
-		  
+
 		  if(!aString)
 			return '';
 		  else {
 
 			var last;
 			while(aString.indexOf('%') != -1) {
-			
+
 			  last = aString;
 
 			  try {
@@ -473,7 +450,7 @@
 			}
 			return aString;
 		  }
-		  
+
         ]]></body>
       </method>
 
@@ -481,6 +458,7 @@
 		<parameter name="aEvent"/>
         <body><![CDATA[
 			let tBox = document.commandDispatcher.focusedElement;
+
 			if(!tBox.value || tBox.value == '')
 				return '';
 			if(aEvent.ctrlKey)
@@ -495,10 +473,10 @@
 				tBox.value= String.concat(before, aFunction(selection), after);
 				tBox.setSelectionRange(before.length, before.length+(aFunction(selection).length));
 			}
-			catch(e){alert(e);}
+			catch(e){}
         ]]></body>
       </method>
-	  
+
       <method name="_decodeSelected">
 		<parameter name="aEvent"/>
         <body><![CDATA[
@@ -517,7 +495,7 @@
 				tBox.value= String.concat(before, aFunction(selection), after);
 				tBox.setSelectionRange(before.length, before.length+(aFunction(selection).length));
 			}
-			catch(e){alert(e);}
+			catch(e){}
         ]]></body>
       </method>
 
@@ -572,66 +550,103 @@
       <handler event="input"
                action="this._syncValue(true);"/>
 
-      <handler event="mousemove"><![CDATA[
-        if (this.plain && !this._focused && this.contentIsCropped)
-          this._initURLTooltip(function () {
-            return this.plain ? this.value : null;
-          }, this, "start");
-      ]]></handler>
 
       <handler event="mouseover"><![CDATA[
-        if (this._mouseover)
-          return;
-        if (!this.plain) {
-          var bO = this.inputBox.boxObject;
-          if (event.screenX < bO.screenX || event.screenX > bO.screenX + bO.width)
-            return;
-        }
-        this._mouseover = true;
-        var bO = this.boxObject;
-        if (this._iconWasHovered || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey ||
-            this.mouseOnTopLinkifies && event.screenY < bO.screenY + bO.height / 4 ||
-            this.mouseOnBottomLinkifies && event.screenY >= bO.screenY + bO.height / 4)
-          this.setAttribute("linkify", "true");
-        else
-          setTimeout (function (self) {
-            if (self._mouseover && self.getAttribute("linkify") != "true") {
-              self.plain = true;
-              document.addEventListener("keydown", self, false);
-            }
-          }, 60, this);
+
+        if (this._mouseover){
+
+         } else {
+
+	        if (!this.plain) {
+	          var bO = this.inputBox.boxObject;
+	          if (event.screenX < bO.screenX || event.screenX > bO.screenX + bO.width)
+	            return;
+	        }
+	        this._mouseover = true;
+	        var bO = this.boxObject;
+	        if (this._iconWasHovered || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey ||
+	            this.mouseOnTopLinkifies && event.screenY < bO.screenY + bO.height / 4 ||
+	            this.mouseOnBottomLinkifies && event.screenY >= bO.screenY + bO.height / 4)
+	          this.setAttribute("linkify", "true");
+	        else
+	          setTimeout (function (self) {
+	            if (self._mouseover && self.getAttribute("linkify") != "true") {
+	              self.plain = true;
+	              document.addEventListener("keydown", self, false);
+	            }
+	          }, 60, this);
+
+	          }
       ]]></handler>
 
       <handler event="mouseout"><![CDATA[
-        for (var node = event.relatedTarget; node; node = node.parentNode)
-          if (node == this)
-            return;
-        this.removeAttribute("linkify");
-        this._mouseover = false;
-        this._iconWasHovered = false;
-        if (!this._focused && this.plain) {
-          this.prettyView();
-          document.removeEventListener("keydown", this, false);
-        } else
-          this._hideURLTooltip();
+
+	        for (var node = event.relatedTarget; node; node = node.parentNode)
+	          if (node == this)
+	            return;
+	        this.removeAttribute("linkify");
+	        this._mouseover = false;
+	        this._iconWasHovered = false;
+	        if (!this._focused && this.plain) {
+	          this.prettyView();
+	          document.removeEventListener("keydown", this, false);
+	        }
+
       ]]></handler>
 
       <handler event="focus" phase="capturing"><![CDATA[
         if (!this._focused && event.originalTarget == this.inputField) {
+       		/* ODPExtension.dump('ojo1');
           this._focused = true;
           if (!this.plain)
             this.plain = true;
+          this.editor.selectAll();
+          //this.editor.selectAll();
+          this.editor.selectAll();
+          event.preventDefault();
+          event.stopPropagation();
+          //gURLBar.focus();
+          this.removeAttribute("linkify");
+          this.focusing = true;
+          this.editor.selectAll(); -->*/
         }
+        this.plain = true;
+
+          this.removeAttribute("linkify");
+        this.plain = true;
+
+        let tBox = document.commandDispatcher.focusedElement;
+        //tBox.focus();
+          this.focusing = true;
+
+       //event.stopPropagation();
+          this._mouseover=true;
+        tBox.setSelectionRange(tBox.value.length, tBox.value.length);
+        this.plain = true;
+
+        var coso = this;
 		document.getElementById('locationbar2-tool-encode').setAttribute('hidden', false);
 		document.getElementById('locationbar2-tool-decode').setAttribute('hidden', false);
+
+		setTimeout(function(){
+			tBox.focus()
+			}, 0);
+
+
       ]]></handler>
 
       <handler event="blur" phase="capturing"><![CDATA[
+
         if (this._focused && !this._dontBlur && event.originalTarget == this.inputField) {
-          this._focused = false;
-          this._syncValue();
-          //if (!this._mouseover)
-            this.prettyView();
+
+        /* 	if( this.focusing ){
+        		this.focusing = false;
+        	} else {
+	          this._focused = false;
+	          this._syncValue(); */
+	          if (!this._mouseover)
+	            this.prettyView();
+	       // }
         }
 		document.getElementById('locationbar2-tool-encode').setAttribute('hidden', true);
 		document.getElementById('locationbar2-tool-decode').setAttribute('hidden', true);
@@ -697,18 +712,8 @@
         for (var node = event.relatedTarget; node; node = node.parentNode)
           if (node == this)
             return;
-        gURLBar._hideURLTooltip();
       ]]></handler>
 
-      <handler event="mousemove"><![CDATA[
-        if (event.originalTarget != this &&
-            event.originalTarget.className != "textbox-presentation-slash")
-          gURLBar._initURLTooltip(function () {
-            return this.href;
-          }, this);
-        else
-          gURLBar._hideURLTooltip();
-      ]]></handler>
     </handlers>
 
   </binding>
