@@ -390,7 +390,7 @@
           this._tooltipTimer = setTimeout (function (self) {
             self._tooltipTimer = 0;
             var tooltipText = callback.apply(object);
-            if (tooltipText) {
+            if (tooltipText && self.urlTooltipLabel) {
               self.urlTooltipLabel.value = tooltipText;
               self.urlTooltipLabel.crop = crop || "center";
               var bO = self.boxObject;
